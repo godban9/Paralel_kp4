@@ -11,19 +11,18 @@ def compute_histogram(image_chunk):
     return histogram
 
 def main():
-    # Ініціалізація MPI
+    #-------------------------------------------------------Ініціалізація MPI
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
     size = comm.Get_size()
 
-    # Ранг 0 читає зображення
     if rank == 0:
         if len(sys.argv) < 2:
             print("Usage: python histogram_mpi.py <image_path>")
             sys.exit(1)
 
         image_path = sys.argv[1]
-        image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)  # Завантаження зображення в градаціях сірого
+        image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)  # ------------------------Завантаження зображення в градаціях сірого
         if image is None:
             print(f"Error: Unable to read image {image_path}")
             sys.exit(1)
@@ -32,20 +31,18 @@ def main():
         chunk_size = height // size
         extra_rows = height % size
 
-        # Поділ зображення на частини
+        #-----------------------------------------------------------Поділ зображення на частини
         chunks = [image[i * chunk_size:(i + 1) * chunk_size] for i in range(size)]
         if extra_rows > 0:
             chunks[-1] = np.vstack((chunks[-1], image[-extra_rows:]))
     else:
         chunks = None
 
-    # Розподіл частин зображення між процесами
     chunk = comm.scatter(chunks, root=0)
 
-    # Локальне обчислення гістограми
     local_histogram = compute_histogram(chunk)
 
-    # Об'єднання локальних гістограм у загальну
+    # -----------------------------Об'єднання локальних гістограм у загальну -------------------------
     total_histogram = np.zeros(256, dtype=int)
     comm.Reduce(local_histogram, total_histogram, op=MPI.SUM, root=0)
 
